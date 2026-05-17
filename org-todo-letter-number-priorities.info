@@ -1,7 +1,7 @@
 This is org-todo-letter-number-priorities.info, produced by makeinfo
 version 7.3 from org-todo-letter-number-priorities.texi.
 
-This manual is for org-todo-letter-number-priorities, version 0.2.0,
+This manual is for org-todo-letter-number-priorities, version 0.3.0,
 last updated 2026-05-16.
 
    Copyright © 2026 Blaine Mooers.
@@ -28,7 +28,7 @@ File: org-todo-letter-number-priorities.info,  Node: Top,  Next: Introduction,  
 org-todo-letter-number-priorities
 *********************************
 
-This manual is for org-todo-letter-number-priorities, version 0.2.0,
+This manual is for org-todo-letter-number-priorities, version 0.3.0,
 last updated 2026-05-16.
 
    Copyright © 2026 Blaine Mooers.
@@ -50,6 +50,7 @@ later version.
 * Introduction::                What this package does and why.
 * Installation::                Manual install, straight.el, use-package.
 * Concepts::                    Priority cookies and headline format.
+* Urgency Asterisks::           Trailing asterisks inside the cookie.
 * Commands::                    Interactive commands.
 * Customization::               User options.
 * The tasks.org File::          Structure and section dates.
@@ -146,7 +147,7 @@ After install, add the install directory to ‘load-path’ and call
        (oltp-db-path "~/60003TimeTracking/cb/tenKprojects.db"))
 
 
-File: org-todo-letter-number-priorities.info,  Node: Concepts,  Next: Commands,  Prev: Installation,  Up: Top
+File: org-todo-letter-number-priorities.info,  Node: Concepts,  Next: Urgency Asterisks,  Prev: Installation,  Up: Top
 
 3 Concepts
 **********
@@ -162,10 +163,59 @@ keyword on an Org headline.
      have one or more digits.  Sorting is numerical, so ‘C2’ outranks
      ‘C10’ which outranks ‘C100’.
 
-
-File: org-todo-letter-number-priorities.info,  Node: Commands,  Next: Customization,  Prev: Concepts,  Up: Top
+Trailing asterisks
+     Optional.  Zero or more ‘*’ characters that appear inside the
+     brackets, immediately after the integer rank.  Asterisks mark extra
+     urgency; see *note Urgency Asterisks::.
 
-4 Commands
+
+File: org-todo-letter-number-priorities.info,  Node: Urgency Asterisks,  Next: Commands,  Prev: Concepts,  Up: Top
+
+4 Urgency Asterisks
+*******************
+
+The priority cookie may carry one or more trailing ‘*’ characters inside
+the brackets, immediately after the integer rank, to mark extra urgency.
+This follows the traditional paper-list convention of flagging an item
+with one or more stars.
+
+     ** TODO [A1]    standard
+     ** TODO [A1*]   urgent
+     ** TODO [A1**]  very urgent
+     ** TODO [A1***] most urgent
+
+   Asterisks inside the brackets are safe because Org's headline
+detection matches ‘^\*+ ’ anchored to the start of a line.  The ‘*’
+characters that appear between ‘[’ and ‘]’ mid-line are plain text from
+Org's point of view.
+
+   ‘oltp-sort-region’ weighs asterisks within each priority group as
+follows.
+
+  1. A letter difference always dominates the asterisk count.  Plain
+     ‘[A1]’ still outranks ‘[B1***]’.
+
+  2. Within the same letter, more asterisks outranks fewer asterisks.
+     ‘[A1***]’ outranks ‘[A1**]’ which outranks ‘[A1*]’.
+
+  3. Any asterisk-bearing cookie outranks a same-letter cookie without
+     asterisks.  ‘[A99*]’ outranks ‘[A1]’.
+
+  4. Within the same letter and asterisk count, ties break on the
+     integer rank, smaller first.  ‘[A1*]’ outranks ‘[A2*]’.
+
+‘oltp-prioritize-region’ preserves any asterisks that are already inside
+a cookie, so they survive renumbering.  The command never invents
+asterisks; they remain a manual urgency marker that you type into the
+cookie yourself.
+
+   ‘oltp-strip-region’ removes the entire bracketed cookie, so asterisks
+come out with it; the ‘TODO’ keyword stays.
+
+
+File: org-todo-letter-number-priorities.info,  Node: Commands,  Next: Customization,  Prev: Urgency Asterisks,  Up: Top
+
+5 Commands
 **********
 
  -- Command: oltp-prioritize-region beg end
@@ -173,14 +223,17 @@ File: org-todo-letter-number-priorities.info,  Node: Commands,  Next: Customizat
      END.  Blank lines start a new priority group, so the first
      contiguous block of headlines becomes ‘A1’, ‘A2’, ‘A3’, the next
      block becomes ‘B1’, ‘B2’, and so on.  Headlines that already carry
-     ‘TODO’ or a ‘[XY]’ cookie are normalized first, so the command is
-     idempotent.  Non-headline content lines between headlines (for
+     ‘TODO’ or a ‘[XY]’ cookie are normalized in place, so the command
+     is idempotent.  Non-headline content lines between headlines (for
      example ‘SCHEDULED’ lines, drawers, body text) do not break a group
-     and do not consume a priority slot.
+     and do not consume a priority slot.  Trailing urgency asterisks
+     inside an existing cookie are preserved across the renumbering; see
+     *note Urgency Asterisks::.
 
  -- Command: oltp-strip-region beg end
      Remove ‘[XY]’ cookies from every Org headline in the region.  The
-     ‘TODO’ keyword is preserved.
+     ‘TODO’ keyword is preserved.  Trailing asterisks inside the cookie
+     are part of the cookie and come out with it.
 
  -- Command: oltp-sort-region beg end
      Sort ‘**+’ subtrees in the region by ‘[XY]’ priority.  Each
@@ -189,7 +242,9 @@ File: org-todo-letter-number-priorities.info,  Node: Commands,  Next: Customizat
      text follow their headline.  Level-1 ‘*’ headlines act as section
      boundaries and stay in place, so sorting across the whole
      ‘tasks.org’ file re-orders items inside each ‘* Do it ...’ section
-     independently.  Subtrees without a cookie sort to the end of their
+     independently.  Within a letter, more asterisks outranks fewer and
+     any asterisk-bearing cookie outranks a plain one; see *note Urgency
+     Asterisks::.  Subtrees without a cookie sort to the end of their
      section in original relative order.
 
  -- Command: oltp-add-project-tag
@@ -226,7 +281,7 @@ File: org-todo-letter-number-priorities.info,  Node: Commands,  Next: Customizat
 
 File: org-todo-letter-number-priorities.info,  Node: Customization,  Next: The tasks.org File,  Prev: Commands,  Up: Top
 
-5 Customization
+6 Customization
 ***************
 
  -- User Option: oltp-tasks-file
@@ -286,7 +341,7 @@ File: org-todo-letter-number-priorities.info,  Node: Customization,  Next: The t
 
 File: org-todo-letter-number-priorities.info,  Node: The tasks.org File,  Next: Section Dates,  Prev: Customization,  Up: Top
 
-6 The tasks.org File
+7 The tasks.org File
 ********************
 
 ‘oltp-init-tasks-file’ writes a file with the structure:
@@ -328,7 +383,7 @@ the region.
 
 File: org-todo-letter-number-priorities.info,  Node: Section Dates,  Next: SQLite Project Database,  Prev: The tasks.org File,  Up: Top
 
-7 Section Dates
+8 Section Dates
 ***************
 
 The default mappings in ‘oltp-section-date-functions’:
@@ -354,7 +409,7 @@ an Emacs time value, or replace the alist outright in your init file.
 
 File: org-todo-letter-number-priorities.info,  Node: SQLite Project Database,  Next: Tag Insertion,  Prev: Section Dates,  Up: Top
 
-8 SQLite Project Database
+9 SQLite Project Database
 *************************
 
 The package prefers the built-in ‘sqlite’ library shipped with Emacs 29
@@ -381,8 +436,8 @@ to ‘completing-read’.
 
 File: org-todo-letter-number-priorities.info,  Node: Tag Insertion,  Next: Keybindings,  Prev: SQLite Project Database,  Up: Top
 
-9 Tag Insertion
-***************
+10 Tag Insertion
+****************
 
 ‘oltp-add-project-tag’ delegates to ‘org-set-tags’, so:
 
@@ -399,7 +454,7 @@ an Org-compatible tag by replacing every character outside
 
 File: org-todo-letter-number-priorities.info,  Node: Keybindings,  Next: Testing,  Prev: Tag Insertion,  Up: Top
 
-10 Keybindings
+11 Keybindings
 **************
 
 The package does not bind any keys by default.  The following bindings
@@ -416,7 +471,7 @@ are a reasonable starting point.
 
 File: org-todo-letter-number-priorities.info,  Node: Testing,  Next: GNU Free Documentation License,  Prev: Keybindings,  Up: Top
 
-11 Testing
+12 Testing
 **********
 
 Run the test suite from the source directory:
@@ -450,6 +505,7 @@ Index
  [index ]
 * Menu:
 
+* asterisks:                             Urgency Asterisks.     (line 6)
 * backend:                               SQLite Project Database.
                                                                 (line 6)
 * commands:                              Commands.              (line 6)
@@ -472,23 +528,25 @@ Index
 * tenKprojects.db:                       SQLite Project Database.
                                                                 (line 6)
 * testing:                               Testing.               (line 6)
+* urgency:                               Urgency Asterisks.     (line 6)
 
 
 Tag Table:
 Node: Top1040
-Node: Introduction2665
-Node: Installation3840
-Node: Concepts5617
-Node: Commands6176
-Node: Customization9211
-Node: The tasks.org File11412
-Node: Section Dates12368
-Node: SQLite Project Database13408
-Node: Tag Insertion14431
-Node: Keybindings15086
-Node: Testing15823
-Node: GNU Free Documentation License16476
-Node: Index16922
+Node: Introduction2735
+Node: Installation3910
+Node: Concepts5687
+Node: Urgency Asterisks6464
+Node: Commands8192
+Node: Customization11603
+Node: The tasks.org File13804
+Node: Section Dates14760
+Node: SQLite Project Database15800
+Node: Tag Insertion16823
+Node: Keybindings17480
+Node: Testing18217
+Node: GNU Free Documentation License18870
+Node: Index19316
 
 End Tag Table
 
