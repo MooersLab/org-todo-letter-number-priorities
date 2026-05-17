@@ -71,7 +71,7 @@ After install, add the install directory to `load-path` and require:
  '(org-todo-letter-number-priorities
    :type git
    :host github
-   :repo "blaine-mooers/org-todo-letter-number-priorities"))
+   :repo "MooersLab/org-todo-letter-number-priorities"))
 ```
 
 ### use-package with straight
@@ -123,13 +123,13 @@ After install, add the install directory to `load-path` and require:
 ### Suggested keybindings
 
 ```elisp
-(define-key org-mode-map (kbd "C-c j p") #'oltp-prioritize-region)
-(define-key org-mode-map (kbd "C-c j s") #'oltp-strip-region)
-(define-key org-mode-map (kbd "C-c j o") #'oltp-sort-region)
-(define-key org-mode-map (kbd "C-c j t") #'oltp-add-project-tag)
-(define-key org-mode-map (kbd "C-c j T") #'oltp-tag-region)
-(define-key org-mode-map (kbd "C-c j i") #'oltp-init-tasks-file)
-(define-key org-mode-map (kbd "C-c j d") #'oltp-schedule-tasks-file)
+(define-key org-mode-map (kbd "C-c u p") #'oltp-prioritize-region)
+(define-key org-mode-map (kbd "C-c u s") #'oltp-strip-region)
+(define-key org-mode-map (kbd "C-c u o") #'oltp-sort-region)
+(define-key org-mode-map (kbd "C-c u t") #'oltp-add-project-tag)
+(define-key org-mode-map (kbd "C-c u T") #'oltp-tag-region)
+(define-key org-mode-map (kbd "C-c u i") #'oltp-init-tasks-file)
+(define-key org-mode-map (kbd "C-c u d") #'oltp-schedule-tasks-file)
 ```
 
 ## Usage
@@ -222,11 +222,13 @@ To tag every headline in a region, run `M-x oltp-tag-region`.
 M-x oltp-strip-region
 ```
 
-removes every `[XY]` cookie from headlines in the region. The `TODO` keyword stays.
+removes every `[XY]` cookie from headlines in the region. 
+The `TODO` keyword stays.
 
 ## SQLite database
 
-The package expects a SQLite database with a column of project identifiers. The default schema is:
+The package expects a SQLite database with a column of project identifiers. 
+The default schema is:
 
 ```sql
 CREATE TABLE projects (
@@ -235,7 +237,10 @@ CREATE TABLE projects (
 );
 ```
 
-The table name is not significant when `oltp-db-table` is `nil`. The package walks the schema and picks the first table whose columns include `oltp-db-column`. If you keep your projects in a different column, change `oltp-db-column`. If multiple tables contain that column, set `oltp-db-table` explicitly to pin detection.
+The table name is not significant when `oltp-db-table` is `nil`. 
+The package walks the schema and picks the first table whose columns include `oltp-db-column`. 
+If you keep your projects in a different column, change `oltp-db-column`. 
+If multiple tables contain that column, set `oltp-db-table` explicitly to pin detection.
 
 Project names are de-duplicated and sorted before they are shown to `completing-read`.
 
@@ -258,11 +263,12 @@ The ERT suite covers prioritization (single, multi-group, idempotent, replaces e
 make test
 ```
 
-`oltp--read-project` is mocked in tag tests, while the SQLite tests build a temporary database with the `sqlite3` shell (or the built-in library) to exercise the project-names path end to end. Date helpers pin `current-time` to a fixed reference moment so the suite is deterministic.
+`oltp--read-project` is mocked in tag tests, while the SQLite tests build a temporary database with the `sqlite3` shell (or the built-in library) to exercise the project-names path end to end. Date helpers pin `current-time` to a fixed reference point to make the suite deterministic.
 
 ## License
 
-This package is licensed under the GNU General Public License, version 3 or later. See [LICENSE](LICENSE) for the full text.
+This package is licensed under the GNU General Public License, version 3 or later. 
+See [LICENSE](LICENSE) for the full text.
 
 The accompanying documentation is licensed under the GNU Free Documentation License, version 1.3 or later.
 
