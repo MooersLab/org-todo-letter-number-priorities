@@ -1,3 +1,8 @@
+![Version](https://img.shields.io/static/v1?label=org-todo-letter-number-priorities&message=0.1.0&color=brightcolor)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Emacs](https://img.shields.io/badge/Emacs-27.1%2B-purple.svg)](https://www.gnu.org/software/emacs/)
+[![Made with Org](https://img.shields.io/badge/Made_with-Emacs_Lisp-7F5AB6.svg)](https://www.gnu.org/software/emacs/manual/html_node/elisp/index.html)
+
 # org-todo-letter-number-priorities
 
 Letter+number TODO priorities for Org-mode.
@@ -76,7 +81,7 @@ After install, add the install directory to `load-path` and require:
   :straight (org-todo-letter-number-priorities
              :type git
              :host github
-             :repo "blaine-mooers/org-todo-letter-number-priorities")
+             :repo "MooersLab/org-todo-letter-number-priorities")
   :after org
   :commands (oltp-prioritize-region
              oltp-strip-region
@@ -87,7 +92,7 @@ After install, add the install directory to `load-path` and require:
              oltp-schedule-tasks-file)
   :custom
   (oltp-tasks-file "~/org/tasks.org")
-  (oltp-db-path "~/60003TimeTracking/cb/tenKprojects.db"))
+  (oltp-db-path "~/6003TimeTracking/cb/tenKprojects.db"))
 ```
 
 ## Configuration
@@ -110,7 +115,7 @@ After install, add the install directory to `load-path` and require:
 | `oltp-tasks-file-headlines` | Eleven `Do it ...` headlines | Top-level headlines written by `oltp-init-tasks-file` |
 | `oltp-org-todo-keyword` | `TODO` | Org keyword used in front of the priority cookie |
 | `oltp-section-date-functions` | Reasonable defaults for each section | Alist mapping section name to a zero-arg function returning a time |
-| `oltp-db-path` | `~/60003TimeTracking/cb/tenKprojects.db` | SQLite database read by the project picker |
+| `oltp-db-path` | `~/6003TimeTracking/cb/tenKprojects.db` | SQLite database read by the project picker |
 | `oltp-db-table` | `nil` (auto-detect) | Table that holds project rows |
 | `oltp-db-column` | `ProjectDirectory` | Column that holds project names |
 | `oltp-tag-use-basename` | `t` | Use the basename of the project path for the tag |
@@ -135,11 +140,11 @@ After install, add the install directory to `load-path` and require:
 M-x oltp-init-tasks-file
 ```
 
-Creates `oltp-tasks-file` with the eleven standard headlines. With a prefix argument the file is overwritten if it already exists.
+Creates `oltp-tasks-file` with the eleven standard headlines. With a prefix argument, the file is overwritten if it already exists.
 
 ### Add tasks under a section
 
-Open `oltp-tasks-file` and type your tasks under the section that matches their time horizon, in declining priority order. Use blank lines to separate priority groups inside the same section.
+Open `oltp-tasks-file` and type your tasks under the section that matches their time horizon, in descending order of priority. Use blank lines to separate priority groups inside the same section.
 
 ```org
 * Do it today
@@ -265,3 +270,10 @@ The accompanying documentation is licensed under the GNU Free Documentation Lice
 
 Blaine Mooers, Department of Biochemistry and Physiology, University of Oklahoma Health Campus.
 Email: blaine-mooers@ou.edu
+
+## Funding
+
+- NIH: R01 CA242845, R01 AI088011
+- NIH: P30 CA225520 (PI: R. Mannel); P30 GM145423 (PI: A. West)
+
+
