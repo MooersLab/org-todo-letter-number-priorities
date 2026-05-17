@@ -40,6 +40,19 @@ These list-editing superpowers reduce the friction in deploying the method.
 Dr. Charles Hobbs's book *Time Power* describes a principled approach to time management that has withstood the test of time.
 It predated *Getting Things Done* by David Allen, which is not principle-driven. 
 
+```bibtex
+@Book{Hobbs1988TimePower,
+  author    = {Hobbs, C.R.},
+  publisher = {Harper \& Row},
+  title     = {Time Power},
+  year      = {1988},
+  isbn      = {9780060914905},
+  series    = {Perennial library},
+  lccn      = {86046072},
+  url       = {https://books.google.com/books?id=5qpDPwAACAAJ},
+}
+```
+
 I wanted the ability to sort a list of TODO items into three groups corresponding to A, B, and C.
 These groups would be separated by blank lines.
 I would use Emacs's ability to shuffle lines up and down easily to determine the order of execution of items within a group.
@@ -49,7 +62,6 @@ This file can contain additional top-level headlines for to-do items to be done 
 The idea is to leave these items unprioritized and without a TODO until their execution day arrives.
 
 This package can also strip these modifiers from the TODO list items to ease carrying over undone items to the next day and enable reprioritizing them alongside incoming TODO items.
-
 
 An unprioritized task looks like
 
@@ -71,9 +83,21 @@ The package is self-contained.
 It depends only on Emacs and Org. 
 
 The optional project-tagging feature reads project names from a SQLite database that you maintain for project management and provides access to these via a pop-up menu.
-I use a four-digit code followed by a brief phrase in camelCase to remind me of the project's nature in a column called ProjectDirectory, because I use this numeric-alphabetic descriptor for the project's directory name in my home directory.
+I use a four-digit code followed by a brief phrase in camelCase in a column called ProjectDirectory to remind me of the project's nature because I use this numeric-alphabetic descriptor for the project's directory name in my home directory.
 The dartabase is read by Emacs's built-in `sqlite` library or the `sqlite3` command-line shell.
 
+## Comparison to the Eisenhower matrix
+
+Both the Hobbs and the Eisenhower matrix support fighting against the cognitive bias of treating the loudest or most immediate tasks as the more critical.
+Hobbs's "A" tasks often mirror Eisenhower's Quadrant 2 (Important, Not Urgent) before they turn into urgent crises.
+By categorizing tasks, both methods allow practitioners to clear out secondary tasks and focus emotional energy on high-impact objectives.
+
+| Feature | Eisenhower Matrix | Dr. Charles Hobbs's A, B, C System |
+| :--- | :--- | :--- |
+| **Primary Metric** | Urgency vs. Importance | Value alignment and sequential execution |
+| **Structure** | Four distinct quadrants ($2 \times 2$ grid) | Three overarching categories with nested numerical ranks |
+| **Philosophical Focus** | Reaction to external deadlines and intrinsic worth | Alignment with long-term goals and daily focus |
+| **Operational Output** | Categorizes tasks by action type (Do, Schedule, Delegate, Delete) | Creates a strictly ordered, linear agenda for the day |
 
 ## Features
 
@@ -83,6 +107,16 @@ The dartabase is read by Emacs's built-in `sqlite` library or the `sqlite3` comm
 - Tag a headline with a project from a SQLite database via `oltp-add-project-tag`. The tag merges into the existing Org tag list through `org-set-tags`.
 - Scaffold `tasks.org` with `oltp-init-tasks-file`, pre-populated with eleven time-horizon sections.
 - Apply SCHEDULED dates to every TODO in `tasks.org` with `oltp-schedule-tasks-file`, derived from each TODO's parent `*` section.
+- The prioritized TODOs show up in org-agenda and on an appropriately configured dashboard.
+
+## Urgent items
+
+The Hobbs framework used a single asterisk to denote urgent tasks in a group, usually group A.
+Org-mode's headline detection is anchored to the start of a line (the regex is roughly ^\*+ ), so asterisks that appear inside the priority cookie - between [ and ] somewhere in the middle of a line - never trigger headline parsing. 
+Org treats them as plain text.
+You can use multiple asterisks to reflect the degree of urgency.
+However, the urgency does affect the order of execution.
+You can still put the important ahead of the urgent
 
 ## Requirements
 
