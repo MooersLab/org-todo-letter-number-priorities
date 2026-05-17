@@ -12,7 +12,7 @@ Letter+number TODO priorities for Org-mode.
 Org-mode supports using the letters A, B, or C, or integers, to add priorities to to-do items.
 I find these default options to be too simple to meet my needs.
 I have had a decades-long habit of using letters to denote one of the quadrants of the [Eisenhower matrix for time management](https://asana.com/resources/eisenhower-matrix), followed by an integer to rank items within a lettered group.
-I picked up this habit from Charles Hobbs's book *Time Power*, which describes a principled approach to time management that has withstood the test of time.
+I picked up this habit from Dr. Charles Hobbs's book *Time Power*, which describes a principled approach to time management that has withstood the test of time.
 
 I wanted the ability to sort a list of TODO items into three groups corresponding to A, B, and C.
 These groups would be separated by blank lines.
