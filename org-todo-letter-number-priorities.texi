@@ -1,0 +1,508 @@
+\input texinfo  @c -*- mode: texinfo; coding: utf-8 -*-
+@c %**start of header
+@setfilename org-todo-letter-number-priorities.info
+@settitle org-todo-letter-number-priorities @value{VERSION}
+@documentencoding UTF-8
+@documentlanguage en
+@set VERSION 0.2.0
+@set UPDATED 2026-05-16
+@c %**end of header
+
+@copying
+This manual is for org-todo-letter-number-priorities, version
+@value{VERSION}, last updated @value{UPDATED}.
+
+Copyright @copyright{} 2026 Blaine Mooers.
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, with no Front-Cover Texts, and with no Back-Cover
+Texts.
+@end quotation
+
+The org-todo-letter-number-priorities Emacs Lisp package is free
+software: you can redistribute it and/or modify it under the terms of
+the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any
+later version.
+@end copying
+
+@dircategory Emacs
+@direntry
+* org-todo-letter-number-priorities: (org-todo-letter-number-priorities). Letter+number TODO priorities for Org-mode.
+@end direntry
+
+@titlepage
+@title org-todo-letter-number-priorities
+@subtitle Letter+number TODO priorities for Org-mode
+@subtitle Version @value{VERSION}
+@author Blaine Mooers @email{blaine-mooers@@ou.edu}
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top org-todo-letter-number-priorities
+
+@insertcopying
+@end ifnottex
+
+@menu
+* Introduction::                What this package does and why.
+* Installation::                Manual install, straight.el, use-package.
+* Concepts::                    Priority cookies and headline format.
+* Commands::                    Interactive commands.
+* Customization::               User options.
+* The tasks.org File::          Structure and section dates.
+* Section Dates::               How SCHEDULED dates are computed.
+* SQLite Project Database::     Schema, detection, and backends.
+* Tag Insertion::               How project tags merge into Org tags.
+* Keybindings::                 Suggested key map.
+* Testing::                     Running the ERT suite.
+* GNU Free Documentation License::
+* Index::
+@end menu
+
+@node Introduction
+@chapter Introduction
+
+@cindex introduction
+@cindex Org-mode
+
+@code{org-todo-letter-number-priorities} provides letter+number
+priority cookies for Org-mode TODOs.  A prioritized headline takes
+the form:
+
+@example
+** TODO [A1] task description :tag:
+@end example
+
+A single space is required between the keyword @code{TODO} and the
+left square bracket of the priority cookie.  @code{X} is an uppercase
+letter that names a priority group and @code{Y} is a non-negative
+integer that ranks the item inside the group; smaller @code{Y} means
+higher priority.  Org-mode picks up the literal @code{TODO} keyword
+in agenda views; the @code{[XY]} cookie is plain text from Org's
+point of view, so it does not interfere with Org's own @code{[#A]}
+priority system.
+
+The package is self-contained.  It depends only on Emacs and Org and
+manages its own SQLite project lookup for the optional tagging
+feature.
+
+It also manages a structured @file{tasks.org} file with eleven
+top-level sections that organize tasks by time horizon and provides a
+command that adds @code{SCHEDULED} lines to each TODO based on its
+parent section.
+
+@node Installation
+@chapter Installation
+
+@cindex installation
+@cindex Makefile
+@cindex install-info
+
+@section Manual install with the Makefile
+
+Clone or copy the source tree, then:
+
+@example
+make compile
+make info
+sudo make install
+@end example
+
+@noindent
+By default the package installs into
+@file{/usr/local/share/emacs/site-lisp/org-todo-letter-number-priorities}
+and the info file into @file{/usr/local/share/info}.  Override
+@code{PREFIX}, @code{ELISPDIR}, or @code{INFODIR} on the command line
+to install elsewhere:
+
+@example
+make install PREFIX=$HOME/.local
+@end example
+
+@noindent
+After install, add the install directory to @code{load-path} and call
+@code{require}:
+
+@lisp
+(add-to-list 'load-path
+  "/usr/local/share/emacs/site-lisp/org-todo-letter-number-priorities")
+(require 'org-todo-letter-number-priorities)
+@end lisp
+
+@section straight.el
+
+@lisp
+(straight-use-package
+ '(org-todo-letter-number-priorities
+   :type git
+   :host github
+   :repo "blaine-mooers/org-todo-letter-number-priorities"))
+@end lisp
+
+@section use-package with straight
+
+@lisp
+(use-package org-todo-letter-number-priorities
+  :straight (org-todo-letter-number-priorities
+             :type git
+             :host github
+             :repo "blaine-mooers/org-todo-letter-number-priorities")
+  :after org
+  :commands (oltp-prioritize-region
+             oltp-strip-region
+             oltp-sort-region
+             oltp-add-project-tag
+             oltp-tag-region
+             oltp-init-tasks-file
+             oltp-schedule-tasks-file)
+  :custom
+  (oltp-tasks-file "~/org/tasks.org")
+  (oltp-db-path "~/60003TimeTracking/cb/tenKprojects.db"))
+@end lisp
+
+@node Concepts
+@chapter Concepts
+
+@cindex priority cookie
+@cindex group letter
+
+A @dfn{priority cookie} is the bracketed text @code{[XY]} that follows
+the @code{TODO} keyword on an Org headline.
+
+@table @asis
+@item @code{X}, the @dfn{group letter}
+A single uppercase letter from @code{A} through @code{Z}.
+
+@item @code{Y}, the @dfn{rank}
+A non-negative integer.  Smaller means higher priority.  @code{Y} may
+have one or more digits.  Sorting is numerical, so @code{C2} outranks
+@code{C10} which outranks @code{C100}.
+@end table
+
+@node Commands
+@chapter Commands
+
+@cindex commands
+
+@deffn Command oltp-prioritize-region beg end
+Add @code{TODO [XY]} cookies to every @code{**+} headline between
+@var{beg} and @var{end}.  Blank lines start a new priority group, so
+the first contiguous block of headlines becomes @code{A1}, @code{A2},
+@code{A3}, the next block becomes @code{B1}, @code{B2}, and so on.
+Headlines that already carry @code{TODO} or a @code{[XY]} cookie are
+normalized first, so the command is idempotent.  Non-headline content
+lines between headlines (for example @code{SCHEDULED} lines, drawers,
+body text) do not break a group and do not consume a priority slot.
+@end deffn
+
+@deffn Command oltp-strip-region beg end
+Remove @code{[XY]} cookies from every Org headline in the region.
+The @code{TODO} keyword is preserved.
+@end deffn
+
+@deffn Command oltp-sort-region beg end
+Sort @code{**+} subtrees in the region by @code{[XY]} priority.  Each
+subtree, from its @code{**+} line up to (but not including) the next
+@code{*} or @code{**+} headline, moves as a unit so @code{SCHEDULED}
+lines and body text follow their headline.  Level-1 @code{*}
+headlines act as section boundaries and stay in place, so sorting
+across the whole @file{tasks.org} file re-orders items inside each
+@code{* Do it @dots{}} section independently.  Subtrees without a
+cookie sort to the end of their section in original relative order.
+@end deffn
+
+@deffn Command oltp-add-project-tag
+Append an Org tag to the current headline.  The project name is read
+from the SQLite database referenced by @code{oltp-db-path} through
+@code{completing-read}, sanitized into an Org-compatible tag, and
+applied through @code{org-set-tags} so existing tags and alignment
+are preserved.  Signals an error when point is not on a headline.
+@end deffn
+
+@deffn Command oltp-tag-region beg end
+Walk the region and prompt for a project tag once per @code{**+}
+headline.  Non-headline lines are skipped.
+@end deffn
+
+@deffn Command oltp-init-tasks-file &optional force
+Create the @file{tasks.org} file at @code{oltp-tasks-file},
+pre-populated with the eleven top-level headlines from
+@code{oltp-tasks-file-headlines}.  With prefix argument @var{force},
+an existing file is overwritten.  Without @var{force}, an existing
+file signals an error.
+@end deffn
+
+@deffn Command oltp-schedule-tasks-file
+Walk @code{oltp-tasks-file} and add (or replace) a @code{SCHEDULED:}
+line under each @code{** TODO} based on the parent @code{*} section.
+Sections that have no entry in @code{oltp-section-date-functions} are
+skipped silently.  Safe to re-run; existing @code{SCHEDULED} lines
+are replaced rather than duplicated.
+@end deffn
+
+@deffn Command oltp-prioritize-and-schedule-tasks-file
+Convenience command equivalent to @code{oltp-schedule-tasks-file}.
+Prioritization remains a manual, region-based operation because
+priority groups follow blank-line breaks rather than the parent
+section.
+@end deffn
+
+@node Customization
+@chapter Customization
+
+@cindex customization
+
+@defopt oltp-tasks-file
+Absolute path to the tasks file managed by this package.  Both the
+directory and the file name are part of this option, so you can keep
+@file{tasks.org} wherever you like.
+
+Default: @file{~/tasks.org}.
+@end defopt
+
+@defopt oltp-tasks-file-headlines
+Top-level headlines written by @code{oltp-init-tasks-file}.  The
+order is significant.  Each entry should have a corresponding entry
+in @code{oltp-section-date-functions} so that
+@code{oltp-schedule-tasks-file} can pick a @code{SCHEDULED} date for
+the TODOs under it.
+
+Default: a list of eleven names ranging from
+@code{"Do it today"} to @code{"Do it next year"}.
+@end defopt
+
+@defopt oltp-org-todo-keyword
+Org keyword used in front of the priority cookie.
+
+Default: @code{"TODO"}.
+@end defopt
+
+@defopt oltp-db-path
+Absolute path to the SQLite database that holds project metadata.
+
+Default: @file{~/60003TimeTracking/cb/tenKprojects.db}.
+@end defopt
+
+@defopt oltp-db-table
+Table inside @code{oltp-db-path} that holds the project rows.  When
+@code{nil}, the package walks every table in the database and picks
+the first one whose schema includes a column named by
+@code{oltp-db-column}.
+
+Default: @code{nil} (auto-detect).
+@end defopt
+
+@defopt oltp-db-column
+Column name to read project names from.
+
+Default: @code{"ProjectDirectory"}.
+@end defopt
+
+@defopt oltp-tag-use-basename
+When non-@code{nil}, the Org tag is built from the basename of the
+project path returned by the database.  When @code{nil}, the full
+path is sanitized into a tag.
+
+Default: @code{t}.
+@end defopt
+
+@defopt oltp-section-date-functions
+Alist mapping a section headline name to a zero-argument function
+returning an Emacs time value.  @code{oltp-schedule-tasks-file} uses
+the returned time as the @code{SCHEDULED} date for every TODO under
+the matching section.
+
+Default entries map each of the eleven standard headlines to a
+reasonable target date.  See @ref{Section Dates}.
+@end defopt
+
+@node The tasks.org File
+@chapter The tasks.org File
+
+@cindex tasks.org
+
+@code{oltp-init-tasks-file} writes a file with the structure:
+
+@example
+#+TITLE: Tasks
+#+STARTUP: showall
+#+LaTeX_HEADER: \usepackage[margin=0.5in]@{geometry@}
+
+* Do it today
+
+* Do it this week
+
+* Do it next week
+
+* Do it later this month
+
+* Do it next month
+
+* Do it in two months
+
+* Do it in three months
+
+* Do it in four months
+
+* Do it in five months
+
+* Do it in six months
+
+* Do it next year
+@end example
+
+@noindent
+Add @code{**} subheadings under each section.  Once a section has its
+items in declining priority order, select that region and run
+@code{oltp-prioritize-region}.  Blank lines start a new priority
+group inside the region.
+
+To assign @code{SCHEDULED} dates to every TODO in the file at once,
+run @code{oltp-schedule-tasks-file}.
+
+@node Section Dates
+@chapter Section Dates
+
+@cindex SCHEDULED
+@cindex section dates
+
+The default mappings in @code{oltp-section-date-functions}:
+
+@multitable @columnfractions 0.35 0.65
+@headitem Section @tab Scheduled date
+@item Do it today @tab today
+@item Do it this week @tab today + 6 days
+@item Do it next week @tab today + 13 days
+@item Do it later this month @tab last day of this month
+@item Do it next month @tab first day of next month
+@item Do it in two months @tab today + 2 months (day clamped to 28)
+@item Do it in three months @tab today + 3 months
+@item Do it in four months @tab today + 4 months
+@item Do it in five months @tab today + 5 months
+@item Do it in six months @tab today + 6 months
+@item Do it next year @tab January 1 of next year
+@end multitable
+
+@noindent
+To change a mapping, set the relevant cdr in
+@code{oltp-section-date-functions} to a function of no arguments that
+returns an Emacs time value, or replace the alist outright in your
+init file.
+
+@node SQLite Project Database
+@chapter SQLite Project Database
+
+@cindex SQLite
+@cindex tenKprojects.db
+@cindex backend
+
+The package prefers the built-in @code{sqlite} library shipped with
+Emacs 29 or newer compiled with @code{--with-sqlite3}.  When the
+built-in library is unavailable, the package falls back to the
+@command{sqlite3} command-line shell.  Either backend is enough.
+
+The default expected schema looks like:
+
+@example
+CREATE TABLE projects (
+    id               INTEGER PRIMARY KEY,
+    ProjectDirectory TEXT
+);
+@end example
+
+@noindent
+The table name is not significant when @code{oltp-db-table} is
+@code{nil}; the package detects whichever table contains the
+@code{ProjectDirectory} column.  If you keep your projects in a
+different column, set @code{oltp-db-column}.  If multiple tables
+contain that column, set @code{oltp-db-table} explicitly to pin
+detection.
+
+Project names are de-duplicated and sorted before they are presented
+to @code{completing-read}.
+
+@node Tag Insertion
+@chapter Tag Insertion
+
+@cindex tags
+
+@code{oltp-add-project-tag} delegates to @code{org-set-tags}, so:
+
+@itemize @bullet
+@item
+The new tag is added to the existing tag list rather than appended as
+a separate block.
+@item
+Org's tag alignment column is respected.
+@item
+The command is idempotent: re-running with the same project does not
+duplicate the tag.
+@end itemize
+
+The project name returned by @code{oltp--read-project} is sanitized
+into an Org-compatible tag by replacing every character outside
+@samp{[A-Za-z0-9_@@%]} with an underscore.
+
+@node Keybindings
+@chapter Keybindings
+
+@cindex keybindings
+
+The package does not bind any keys by default.  The following bindings
+are a reasonable starting point.
+
+@lisp
+(define-key org-mode-map (kbd "C-c j p") #'oltp-prioritize-region)
+(define-key org-mode-map (kbd "C-c j s") #'oltp-strip-region)
+(define-key org-mode-map (kbd "C-c j o") #'oltp-sort-region)
+(define-key org-mode-map (kbd "C-c j t") #'oltp-add-project-tag)
+(define-key org-mode-map (kbd "C-c j T") #'oltp-tag-region)
+(define-key org-mode-map (kbd "C-c j i") #'oltp-init-tasks-file)
+(define-key org-mode-map (kbd "C-c j d") #'oltp-schedule-tasks-file)
+@end lisp
+
+@node Testing
+@chapter Testing
+
+@cindex testing
+@cindex ERT
+
+Run the test suite from the source directory:
+
+@example
+make test
+@end example
+
+@noindent
+The Makefile invokes Emacs in batch mode and loads the test file with
+mocked @code{oltp--read-project} so the project picker is exercised
+without a real database, while the SQLite-specific tests build a
+temporary database with the @command{sqlite3} command-line tool (or
+the built-in library) to validate the project-name lookup end to
+end.  Date-helper tests pin @code{current-time} to a fixed reference
+moment so they are deterministic.
+
+@node GNU Free Documentation License
+@appendix GNU Free Documentation License
+
+This documentation is distributed under the terms of the GNU Free
+Documentation License, Version 1.3 or any later version published by
+the Free Software Foundation.  See
+@uref{https://www.gnu.org/licenses/fdl-1.3.html} for the full text.
+
+@node Index
+@unnumbered Index
+
+@printindex cp
+
+@bye
