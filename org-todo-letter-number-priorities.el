@@ -4,7 +4,7 @@
 
 ;; Author: Blaine Mooers <blaine-mooers@ou.edu>
 ;; Maintainer: Blaine Mooers <blaine-mooers@ou.edu>
-;; Version: 0.2.0
+;; Version: 0.3.0
 ;; Package-Requires: ((emacs "27.1") (org "9.3"))
 ;; Keywords: outlines, calendar, convenience, org
 ;; URL: https://github.com/blaine-mooers/org-todo-letter-number-priorities
@@ -22,6 +22,21 @@
 ;; square bracket of the priority cookie.  X is an uppercase letter
 ;; that names a priority group and Y is a non-negative integer that
 ;; ranks the item inside the group; smaller Y means higher priority.
+;;
+;; The cookie may also carry one or more trailing asterisks inside
+;; the brackets to mark extra urgency, following the traditional
+;; paper-list convention.  Examples:
+;;
+;;     ** TODO [A1]    task description     ;; standard
+;;     ** TODO [A1*]   task description     ;; urgent
+;;     ** TODO [A1**]  task description     ;; very urgent
+;;     ** TODO [A1***] task description     ;; most urgent
+;;
+;; More asterisks means more urgent, and any asterisk-bearing cookie
+;; outranks a same-letter cookie without asterisks.  Asterisks are
+;; safe inside the brackets because Org's headline detection is
+;; anchored at the start of a line; mid-line `*' characters are plain
+;; text from Org's point of view.
 ;;
 ;; The package is self-contained.  It does not depend on howm-todo;
 ;; the relevant region-and-text logic, the SQLite project lookup, and
@@ -218,12 +233,13 @@ Match groups:
   2. The TODO keyword, if present.
   3. The priority letter X, if a cookie is present.
   4. The priority number Y, if a cookie is present.
-  5. The remainder of the line after the cookie."
+  5. The trailing asterisks inside the cookie, if any.
+  6. The remainder of the line after the cookie."
   (concat "^\\(\\*+\\)[ \t]+"
           "\\(?:\\("
           (regexp-quote oltp-org-todo-keyword)
           "\\)\\b[ \t]+\\)?"
-          "\\(?:\\[\\([A-Z]\\)\\([0-9]+\\)\\][ \t]+\\)?"
+          "\\(?:\\[\\([A-Z]\\)\\([0-9]+\\)\\(\\*+\\)?\\][ \t]+\\)?"
           "\\(.*\\)$"))
 
 (defun oltp--at-headline-p ()
@@ -233,38 +249,57 @@ Match groups:
     (looking-at "^\\*+[ \t]+")))
 
 (defun oltp--current-headline-priority ()
-  "Return (LETTER . NUMBER) for the current headline, or nil when absent."
+  "Return (LETTER ASTERISK-COUNT NUMBER) for the current headline.
+Returns nil when the headline has no priority cookie."
   (save-excursion
     (beginning-of-line)
     (when (looking-at (oltp--headline-rx))
       (let ((letter (match-string 3))
-            (number (match-string 4)))
+            (number (match-string 4))
+            (ast    (match-string 5)))
         (when (and letter number)
-          (cons letter (string-to-number number)))))))
+          (list letter
+                (length (or ast ""))
+                (string-to-number number)))))))
 
-(defun oltp--rewrite-current-headline (letter number)
-  "Replace the current headline with one carrying TODO [LETTER NUMBER]."
+(defun oltp--current-headline-asterisks ()
+  "Return the trailing asterisk string of the current headline's cookie.
+Returns the empty string when the headline has no cookie or no
+asterisks inside the cookie."
+  (save-excursion
+    (beginning-of-line)
+    (if (looking-at (oltp--headline-rx))
+        (or (match-string 5) "")
+      "")))
+
+(defun oltp--rewrite-current-headline (letter number &optional asterisks)
+  "Replace the current headline with one carrying TODO [LETTER NUMBER ASTERISKS].
+ASTERISKS is a string of zero or more `*' characters that is
+written verbatim after the integer rank inside the brackets."
   (save-excursion
     (beginning-of-line)
     (when (looking-at (oltp--headline-rx))
       (let* ((stars (match-string 1))
-             (rest  (match-string 5))
-             (new   (format "%s %s [%s%d] %s"
+             (rest  (match-string 6))
+             (ast   (or asterisks ""))
+             (new   (format "%s %s [%s%d%s] %s"
                             stars
                             oltp-org-todo-keyword
-                            letter number rest)))
+                            letter number ast rest)))
         (delete-region (line-beginning-position) (line-end-position))
         (insert new)))))
 
 (defun oltp--strip-cookie-on-current-headline ()
-  "Remove the [XY] cookie from the current headline, keeping TODO if any."
+  "Remove the [XY...] cookie from the current headline, keeping TODO if any.
+Trailing asterisks inside the cookie are part of the cookie, so
+they are stripped along with the rest."
   (save-excursion
     (beginning-of-line)
     (when (looking-at (oltp--headline-rx))
       (let* ((stars   (match-string 1))
              (keyword (match-string 2))
              (letter  (match-string 3))
-             (rest    (match-string 5)))
+             (rest    (match-string 6)))
         (when letter
           (let ((new (if keyword
                          (format "%s %s %s" stars keyword rest)
@@ -296,12 +331,17 @@ The TODO keyword is preserved."
 Blank lines start a new priority group, so the first contiguous
 block of headlines becomes A1, A2, A3, the next block becomes
 B1, B2, and so on.  Non-headline content lines between headlines
-do not break a group and do not consume a slot.  Existing cookies
-are stripped before the new ones are added, so the command is
-idempotent."
+do not break a group and do not consume a slot.
+
+Trailing asterisks inside an existing cookie are preserved.  A
+headline that read `** TODO [Z9**] task' before the command runs
+will read `** TODO [A1**] task' afterward, with the asterisks
+intact.  The command never invents asterisks; they remain a
+manual urgency marker.
+
+The command is idempotent."
   (interactive "r")
   (let ((end-marker (copy-marker end t)))
-    (oltp-strip-region beg end-marker)
     (save-excursion
       (save-restriction
         (narrow-to-region beg (marker-position end-marker))
@@ -319,26 +359,38 @@ idempotent."
              ((oltp--at-headline-p)
               (setq item-index (1+ item-index))
               (setq in-group t)
-              (oltp--rewrite-current-headline
-               (char-to-string (+ ?A group-index))
-               item-index))
+              (let ((ast (oltp--current-headline-asterisks)))
+                (oltp--rewrite-current-headline
+                 (char-to-string (+ ?A group-index))
+                 item-index
+                 ast)))
              (t nil))
             (forward-line 1)))))
     (set-marker end-marker nil)))
 
 (defun oltp--priority-sort-cmp (a b)
   "Return a negative, zero, or positive integer comparing keys A and B.
-A and B are conses of the form (LETTER . NUMBER), or nil."
+A and B are lists of the form (LETTER ASTERISK-COUNT NUMBER), or
+nil.  The ordering is:
+
+  1. By letter, ascending.  A outranks B which outranks C.
+  2. Within the same letter, by asterisk count, descending.  More
+     asterisks means more urgent, so [A1***] outranks [A1**] which
+     outranks [A1*] which outranks plain [A1].
+  3. Within the same letter and asterisk count, by integer rank,
+     ascending.  Smaller number means higher priority, so [A2*]
+     outranks [A3*]."
   (cond
    ((and (null a) (null b)) 0)
    ((null a) 1)
    ((null b) -1)
-   ((string< (car a) (car b)) -1)
-   ((string= (car a) (car b))
-    (cond ((< (cdr a) (cdr b)) -1)
-          ((> (cdr a) (cdr b)) 1)
-          (t 0)))
-   (t 1)))
+   ((string< (nth 0 a) (nth 0 b)) -1)
+   ((string> (nth 0 a) (nth 0 b)) 1)
+   ((> (nth 1 a) (nth 1 b)) -1)
+   ((< (nth 1 a) (nth 1 b)) 1)
+   ((< (nth 2 a) (nth 2 b)) -1)
+   ((> (nth 2 a) (nth 2 b)) 1)
+   (t 0)))
 
 (defun oltp--render-sorted-subtrees (subtrees)
   "Sort SUBTREES by priority key and concatenate their text.
@@ -381,13 +433,18 @@ headline and its body, up to the next `*' or `**+' headline)."
     (nreverse chunks)))
 
 (defun oltp--chunk-priority (chunk-text)
-  "Return the priority cons for the headline that starts CHUNK-TEXT, or nil."
+  "Return the priority key for the headline that starts CHUNK-TEXT.
+The key is (LETTER ASTERISK-COUNT NUMBER), or nil when the
+headline has no cookie."
   (let ((first-line (car (split-string chunk-text "\n"))))
     (when (string-match (oltp--headline-rx) first-line)
       (let ((letter (match-string 3 first-line))
-            (number (match-string 4 first-line)))
+            (number (match-string 4 first-line))
+            (ast    (match-string 5 first-line)))
         (when (and letter number)
-          (cons letter (string-to-number number)))))))
+          (list letter
+                (length (or ast ""))
+                (string-to-number number)))))))
 
 ;;;###autoload
 (defun oltp-sort-region (beg end)
