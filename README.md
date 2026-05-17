@@ -299,6 +299,7 @@ Walks `oltp-tasks-file` and inserts (or replaces) a SCHEDULED line under each `*
 | Do it in five months | today + 5 months |
 | Do it in six months | today + 6 months |
 | Do it next year | January 1 of next year |
+| --- | --- |
 
 The command is safe to re-run; existing SCHEDULED lines are replaced rather than duplicated.
 
@@ -379,6 +380,15 @@ make test
 `oltp--read-project` is mocked in tag tests, while the SQLite tests build a temporary database with the `sqlite3` shell (or the built-in library) to exercise the project-names path end to end. Date helpers pin `current-time` to a fixed reference point to make the suite deterministic.
 
 All tests were passing.
+
+## Updates
+
+| :---| :--- | :--- |
+| Version | Description of change | Date|
+| 0.1.0 | Initial commit | 2026  May 16 |
+| 0.2.0 | Added support for multiple asterisks to indicate urgency | 2026 May 17 |
+|     |    |     |
+
 
 ## License
 
