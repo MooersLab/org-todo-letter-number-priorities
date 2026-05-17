@@ -23,6 +23,13 @@ It can also strip out these modifiers of the TODO list items to ease carrying ov
 
 This package lets you mark, sort, and tag Org headlines with priority cookies of the form `TODO [XY]`, where `X` is an uppercase letter for the priority group and `Y` is a non-negative integer for the rank inside the group. 
 A smaller `Y` means higher priority, so `[A1]` outranks `[A2]` which outranks `[A44]` which outranks `[B1]`. 
+
+An unprioritized task looks like
+
+```org
+** task description
+```
+
 A prioritized Org headline looks like
 
 ```org
