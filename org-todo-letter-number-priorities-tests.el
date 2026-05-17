@@ -142,6 +142,15 @@
       (oltp-strip-region (point-min) (point-max)))
     "")))
 
+(ert-deftest oltp-test-strip-removes-asterisks-with-cookie ()
+  "Asterisks live inside the cookie, so strip removes them too."
+  (should
+   (equal
+    (oltp-tests--with-buffer
+        "** TODO [A1***] urgent\n** TODO [B2*] less urgent"
+      (oltp-strip-region (point-min) (point-max)))
+    "** TODO urgent\n** TODO less urgent")))
+
 ;;; -------------------------- prioritize ------------------------------------
 
 (ert-deftest oltp-test-prioritize-single-group ()
@@ -206,6 +215,42 @@
       (oltp-prioritize-region (point-min) (point-max)))
     "*** TODO [A1] sub one\n*** TODO [A2] sub two")))
 
+(ert-deftest oltp-test-prioritize-preserves-asterisks ()
+  "Existing asterisks survive renumbering."
+  (should
+   (equal
+    (oltp-tests--with-buffer
+        (concat "** TODO [Z9**] urgent thing\n"
+                "** TODO [Z8] normal thing\n"
+                "** TODO [Z7***] very urgent thing")
+      (oltp-prioritize-region (point-min) (point-max)))
+    (concat "** TODO [A1**] urgent thing\n"
+            "** TODO [A2] normal thing\n"
+            "** TODO [A3***] very urgent thing"))))
+
+(ert-deftest oltp-test-prioritize-preserves-asterisks-across-groups ()
+  "Asterisks survive renumbering across blank-line group boundaries."
+  (should
+   (equal
+    (oltp-tests--with-buffer
+        (concat "** TODO [X1*] one\n"
+                "** TODO [X2**] two\n"
+                "\n"
+                "** TODO [Y1***] three")
+      (oltp-prioritize-region (point-min) (point-max)))
+    (concat "** TODO [A1*] one\n"
+            "** TODO [A2**] two\n"
+            "\n"
+            "** TODO [B1***] three"))))
+
+(ert-deftest oltp-test-prioritize-does-not-invent-asterisks ()
+  "A headline without asterisks does not gain any."
+  (should
+   (equal
+    (oltp-tests--with-buffer "** plain one\n** plain two"
+      (oltp-prioritize-region (point-min) (point-max)))
+    "** TODO [A1] plain one\n** TODO [A2] plain two")))
+
 ;;; -------------------------- headline parsing ------------------------------
 
 (ert-deftest oltp-test-current-headline-priority-cookie ()
@@ -213,7 +258,7 @@
     (delay-mode-hooks (org-mode))
     (insert "** TODO [A1] task")
     (goto-char (point-min))
-    (should (equal (oltp--current-headline-priority) '("A" . 1)))))
+    (should (equal (oltp--current-headline-priority) '("A" 0 1)))))
 
 (ert-deftest oltp-test-current-headline-priority-bare ()
   (with-temp-buffer
@@ -227,18 +272,61 @@
     (delay-mode-hooks (org-mode))
     (insert "*** TODO [C44] deep")
     (goto-char (point-min))
-    (should (equal (oltp--current-headline-priority) '("C" . 44)))))
+    (should (equal (oltp--current-headline-priority) '("C" 0 44)))))
+
+(ert-deftest oltp-test-current-headline-priority-with-asterisks ()
+  (with-temp-buffer
+    (delay-mode-hooks (org-mode))
+    (insert "** TODO [A1**] urgent task")
+    (goto-char (point-min))
+    (should (equal (oltp--current-headline-priority) '("A" 2 1)))))
+
+(ert-deftest oltp-test-current-headline-asterisks ()
+  (with-temp-buffer
+    (delay-mode-hooks (org-mode))
+    (insert "** TODO [A1***] task")
+    (goto-char (point-min))
+    (should (equal (oltp--current-headline-asterisks) "***"))))
+
+(ert-deftest oltp-test-current-headline-asterisks-empty ()
+  (with-temp-buffer
+    (delay-mode-hooks (org-mode))
+    (insert "** TODO [A1] task")
+    (goto-char (point-min))
+    (should (equal (oltp--current-headline-asterisks) ""))))
 
 ;;; -------------------------- priority compare ------------------------------
 
-(ert-deftest oltp-test-priority-sort-cmp ()
-  (should (< (oltp--priority-sort-cmp '("A" . 1) '("A" . 2)) 0))
-  (should (= (oltp--priority-sort-cmp '("A" . 1) '("A" . 1)) 0))
-  (should (> (oltp--priority-sort-cmp '("B" . 1) '("A" . 99)) 0))
-  (should (< (oltp--priority-sort-cmp '("A" . 99) '("B" . 1)) 0))
-  (should (> (oltp--priority-sort-cmp nil '("A" . 1)) 0))
-  (should (< (oltp--priority-sort-cmp '("A" . 1) nil) 0))
+(ert-deftest oltp-test-priority-sort-cmp-basic ()
+  (should (< (oltp--priority-sort-cmp '("A" 0 1) '("A" 0 2)) 0))
+  (should (= (oltp--priority-sort-cmp '("A" 0 1) '("A" 0 1)) 0))
+  (should (> (oltp--priority-sort-cmp '("B" 0 1) '("A" 0 99)) 0))
+  (should (< (oltp--priority-sort-cmp '("A" 0 99) '("B" 0 1)) 0))
+  (should (> (oltp--priority-sort-cmp nil '("A" 0 1)) 0))
+  (should (< (oltp--priority-sort-cmp '("A" 0 1) nil) 0))
   (should (= (oltp--priority-sort-cmp nil nil) 0)))
+
+(ert-deftest oltp-test-priority-sort-cmp-asterisks-outrank-plain ()
+  "Asterisk-bearing cookies outrank same-letter cookies without."
+  (should (< (oltp--priority-sort-cmp '("A" 1 9) '("A" 0 1)) 0))
+  (should (< (oltp--priority-sort-cmp '("A" 3 5) '("A" 0 1)) 0))
+  (should (> (oltp--priority-sort-cmp '("A" 0 1) '("A" 1 9)) 0)))
+
+(ert-deftest oltp-test-priority-sort-cmp-more-asterisks-win ()
+  "More asterisks outrank fewer asterisks within the same letter."
+  (should (< (oltp--priority-sort-cmp '("A" 3 1) '("A" 2 1)) 0))
+  (should (< (oltp--priority-sort-cmp '("A" 2 1) '("A" 1 1)) 0))
+  (should (> (oltp--priority-sort-cmp '("A" 1 1) '("A" 2 1)) 0)))
+
+(ert-deftest oltp-test-priority-sort-cmp-letter-beats-asterisks ()
+  "A letter difference always dominates the asterisk count."
+  (should (< (oltp--priority-sort-cmp '("A" 0 1) '("B" 5 1)) 0))
+  (should (> (oltp--priority-sort-cmp '("B" 5 1) '("A" 0 1)) 0)))
+
+(ert-deftest oltp-test-priority-sort-cmp-number-tiebreaks-equal-asterisks ()
+  "Within the same letter and asterisk count, smaller number wins."
+  (should (< (oltp--priority-sort-cmp '("A" 1 1) '("A" 1 2)) 0))
+  (should (> (oltp--priority-sort-cmp '("A" 1 10) '("A" 1 2)) 0)))
 
 ;;; -------------------------- sort ------------------------------------------
 
@@ -305,6 +393,58 @@
             "some intro\n"
             "** TODO [A1] alpha\n"
             "** TODO [B1] beta\n"))))
+
+(ert-deftest oltp-test-sort-more-asterisks-go-first-within-letter ()
+  "Within group A, more asterisks comes first."
+  (should
+   (equal
+    (oltp-tests--with-buffer
+        (concat "** TODO [A1] plain\n"
+                "** TODO [A2*] one star\n"
+                "** TODO [A3***] three stars\n"
+                "** TODO [A4**] two stars\n")
+      (oltp-sort-region (point-min) (point-max)))
+    (concat "** TODO [A3***] three stars\n"
+            "** TODO [A4**] two stars\n"
+            "** TODO [A2*] one star\n"
+            "** TODO [A1] plain\n"))))
+
+(ert-deftest oltp-test-sort-asterisk-items-outrank-plain-same-letter ()
+  "Any asterisk-bearing A item sorts above every plain A item."
+  (should
+   (equal
+    (oltp-tests--with-buffer
+        (concat "** TODO [A1] plain one\n"
+                "** TODO [A2] plain two\n"
+                "** TODO [A99*] urgent low rank\n")
+      (oltp-sort-region (point-min) (point-max)))
+    (concat "** TODO [A99*] urgent low rank\n"
+            "** TODO [A1] plain one\n"
+            "** TODO [A2] plain two\n"))))
+
+(ert-deftest oltp-test-sort-letter-still-dominates-asterisks ()
+  "A letter difference dominates asterisk count."
+  (should
+   (equal
+    (oltp-tests--with-buffer
+        (concat "** TODO [B1***] b with stars\n"
+                "** TODO [A1] plain a\n")
+      (oltp-sort-region (point-min) (point-max)))
+    (concat "** TODO [A1] plain a\n"
+            "** TODO [B1***] b with stars\n"))))
+
+(ert-deftest oltp-test-sort-number-tiebreaks-equal-asterisks ()
+  "Same letter, same asterisk count: smaller number first."
+  (should
+   (equal
+    (oltp-tests--with-buffer
+        (concat "** TODO [A5**] five\n"
+                "** TODO [A1**] one\n"
+                "** TODO [A3**] three\n")
+      (oltp-sort-region (point-min) (point-max)))
+    (concat "** TODO [A1**] one\n"
+            "** TODO [A3**] three\n"
+            "** TODO [A5**] five\n"))))
 
 ;;; -------------------------- date helpers ----------------------------------
 
