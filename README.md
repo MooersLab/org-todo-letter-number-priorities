@@ -5,7 +5,7 @@
 
 # org-todo-letter-number-priorities
 
-Letter+number TODO priorities for Org-mode.
+Letter+number nested prioritization of TODOs for Org-mode.
 
 ## Problem addressed
 
