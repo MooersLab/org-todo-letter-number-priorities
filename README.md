@@ -9,20 +9,47 @@ Letter+number TODO priorities for Org-mode.
 
 ## Problem addressed
 
-Org-mode supports using the letters A, B, or C, or integers, to add priorities to to-do items.
+A flat, unprioritized to-do list induces analysis paralysis.
+In addition, org-agenda has the problem of allowing undone TODO items to build up rapidly and become overwhelming.
+This side-effect drives away most people who attempt to use org-agenda for project management.
+
+## The solution implemented here
+
+The solution is to deploy a strong priorization system.
+I prefer a nested approach to support doing the important but not urgent tasks of the Eisenhower matrix. 
+
+Org-agenda supports using the letters A, B, or C, or integers, to add priorities to to-do items.
 I find these default options to be too simple to meet my needs.
-I have had a decades-long habit of using letters to denote one of the quadrants of the [Eisenhower matrix for time management](https://asana.com/resources/eisenhower-matrix), followed by an integer to rank items within a lettered group.
-I picked up this habit from Dr. Charles Hobbs's book *Time Power*, which describes a principled approach to time management that has withstood the test of time.
+They do not support nested prioritization.
+
+## Nested prioritization
+
+I have used, for decades, the Dr. Charles Hobbs prioritization scheme described in his book *Time Power*, which uses three groups of tasks denoted by letters.
+Items within a group are numbered: (e.g., A1, A2, B1, B2, C1, C2).
+The numbers depict the order of execution.
+
+- A Items: Critical tasks with severe consequences if left undone (Must do today).
+- B Items: Important tasks with mild consequences (Should do today).
+- C Items: Nice-to-do tasks with little to no immediate consequences (Could do today).
+
+This two-level, nested prioritization can be time-consuming to implement on paper every day. 
+This package eases implementation by leveraging Emacs's ability to shuffle lines up and down.
+You can easily move items between letter groups and sort items within a letter group.
+These list-editing superpowers reduce the friction in deploying the method.
+
+Dr. Charles Hobbs's book *Time Power* describes a principled approach to time management that has withstood the test of time.
+It predated *Getting Things Done* by David Allen, which is not principle-driven. 
 
 I wanted the ability to sort a list of TODO items into three groups corresponding to A, B, and C.
 These groups would be separated by blank lines.
-I would use Emacs's ability to shuffle lines up and down easily to determine the priority of items within a group.
+I would use Emacs's ability to shuffle lines up and down easily to determine the order of execution of items within a group.
 This package will add the letters and numbers along with `** TODO` keyword to such clustered lists under a heading called `* Do it today` in tasks.org.
-This file contains additional top-level headlines for to-do items to be done out in the future.
-It can also strip out these modifiers of the TODO list items to ease carrying over the undone items to the next day and enabling their reprioritizing with incoming TODO items.
 
-This package lets you mark, sort, and tag Org headlines with priority cookies of the form `TODO [XY]`, where `X` is an uppercase letter for the priority group and `Y` is a non-negative integer for the rank inside the group. 
-A smaller `Y` means higher priority, so `[A1]` outranks `[A2]` which outranks `[A44]` which outranks `[B1]`. 
+This file can contain additional top-level headlines for to-do items to be done out in the future.
+The idea is to leave these items unprioritized and without a TODO until their execution day arrives.
+
+This package can also strip these modifiers from the TODO list items to ease carrying over undone items to the next day and enable reprioritizing them alongside incoming TODO items.
+
 
 An unprioritized task looks like
 
@@ -38,7 +65,7 @@ A prioritized Org headline looks like
 
 A single space is required between the keyword `TODO` and the left square bracket.
 The TODO keyword must be in a headline with two asterisks in the tasks.org file.
-You have the option to add `:SCHEDULED:` below the line containing ** TODO.
+You have the option to add `:SCHEDULED:` below the line containing `** TODO`.
 
 The package is self-contained. 
 It depends only on Emacs and Org. 
