@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/static/v1?label=org-todo-letter-number-priorities&message=0.1.0&color=brightcolor)
+![Version](https://img.shields.io/static/v1?label=org-todo-letter-number-priorities&message=0.2.0&color=brightcolor)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Emacs](https://img.shields.io/badge/Emacs-27.1%2B-purple.svg)](https://www.gnu.org/software/emacs/)
 [![Made with Org](https://img.shields.io/badge/Made_with-Emacs_Lisp-7F5AB6.svg)](https://www.gnu.org/software/emacs/manual/html_node/elisp/index.html)
