@@ -1,21 +1,103 @@
-![Version](https://img.shields.io/static/v1?label=org-todo-letter-number-priorities&message=0.1.0&color=brightcolor)
+![Version](https://img.shields.io/static/v1?label=org-todo-letter-number-priorities&message=0.2.0&color=brightcolor)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Emacs](https://img.shields.io/badge/Emacs-27.1%2B-purple.svg)](https://www.gnu.org/software/emacs/)
 [![Made with Org](https://img.shields.io/badge/Made_with-Emacs_Lisp-7F5AB6.svg)](https://www.gnu.org/software/emacs/manual/html_node/elisp/index.html)
 
 # org-todo-letter-number-priorities
 
-Letter+number TODO priorities for Org-mode.
+Letter+number nested prioritization of TODOs for Org-mode.
 
-This package lets you mark, sort, and tag Org headlines with priority cookies of the form `TODO [XY]`, where `X` is an uppercase letter for the priority group and `Y` is a non-negative integer for the rank inside the group. A smaller `Y` means higher priority, so `[A1]` outranks `[A2]` which outranks `[A44]` which outranks `[B1]`. A prioritized Org headline looks like
+## Problem addressed
+
+A flat, unprioritized to-do list induces analysis paralysis.
+In addition, org-agenda has the problem of allowing undone TODO items to build up rapidly and become overwhelming.
+This side-effect drives away most people who attempt to use org-agenda for project management.
+
+## The solution implemented here
+
+The solution is to deploy a strong priorization system.
+I prefer a nested approach to support doing the important but not urgent tasks of the Eisenhower matrix. 
+
+Org-agenda supports using the letters A, B, or C, or integers, to add priorities to to-do items.
+I find these default options to be too simple to meet my needs.
+They do not support nested prioritization.
+
+## Nested prioritization
+
+I have used, for decades, the Dr. Charles Hobbs prioritization scheme described in his book *Time Power*, which uses three groups of tasks denoted by letters.
+Items within a group are numbered: (e.g., A1, A2, B1, B2, C1, C2).
+The numbers depict the order of execution.
+
+- A Items: Critical tasks with severe consequences if left undone (Must do today).
+- B Items: Important tasks with mild consequences (Should do today).
+- C Items: Nice-to-do tasks with little to no immediate consequences (Could do today).
+
+This two-level, nested prioritization can be time-consuming to implement on paper every day. 
+This package eases implementation by leveraging Emacs's ability to shuffle lines up and down.
+You can easily move items between letter groups and sort items within a letter group.
+These list-editing superpowers reduce the friction in deploying the method.
+
+Dr. Charles Hobbs's book *Time Power* describes a principled approach to time management that has withstood the test of time.
+It predated *Getting Things Done* by David Allen, which is not principle-driven. 
+
+```bibtex
+@Book{Hobbs1988TimePower,
+  author    = {Hobbs, C.R.},
+  publisher = {Harper \& Row},
+  title     = {Time Power},
+  year      = {1988},
+  isbn      = {9780060914905},
+  series    = {Perennial library},
+  lccn      = {86046072},
+  url       = {https://books.google.com/books?id=5qpDPwAACAAJ},
+}
+```
+
+I wanted the ability to sort a list of TODO items into three groups corresponding to A, B, and C.
+These groups would be separated by blank lines.
+I would use Emacs's ability to shuffle lines up and down easily to determine the order of execution of items within a group.
+This package will add the letters and numbers along with `** TODO` keyword to such clustered lists under a heading called `* Do it today` in tasks.org.
+
+This file can contain additional top-level headlines for to-do items to be done out in the future.
+The idea is to leave these items unprioritized and without a TODO until their execution day arrives.
+
+This package can also strip these modifiers from the TODO list items to ease carrying over undone items to the next day and enable reprioritizing them alongside incoming TODO items.
+
+An unprioritized task looks like
+
+```org
+** task description
+```
+
+A prioritized Org headline looks like
 
 ```org
 ** TODO [A1] task description :tag:
 ```
 
 A single space is required between the keyword `TODO` and the left square bracket.
+The TODO keyword must be in a headline with two asterisks in the tasks.org file.
+You have the option to add `:SCHEDULED:` below the line containing `** TODO`.
 
-The package is self-contained. It depends only on Emacs and Org. The optional project-tagging feature reads project names from a SQLite database you maintain for time tracking, using either Emacs's built-in `sqlite` library or the `sqlite3` command-line shell.
+The package is self-contained. 
+It depends only on Emacs and Org. 
+
+The optional project-tagging feature reads project names from a SQLite database that you maintain for project management and provides access to these via a pop-up menu.
+I use a four-digit code followed by a brief phrase in camelCase in a column called ProjectDirectory to remind me of the project's nature because I use this numeric-alphabetic descriptor for the project's directory name in my home directory.
+The dartabase is read by Emacs's built-in `sqlite` library or the `sqlite3` command-line shell.
+
+## Comparison to the Eisenhower matrix
+
+Both the Hobbs and the Eisenhower matrix support fighting against the cognitive bias of treating the loudest or most immediate tasks as the more critical.
+Hobbs's "A" tasks often mirror Eisenhower's Quadrant 2 (Important, Not Urgent) before they turn into urgent crises.
+By categorizing tasks, both methods allow practitioners to clear out secondary tasks and focus emotional energy on high-impact objectives.
+
+| Feature | Eisenhower Matrix | Dr. Charles Hobbs's A, B, C System |
+| :--- | :--- | :--- |
+| **Primary Metric** | Urgency vs. Importance | Value alignment and sequential execution |
+| **Structure** | Four distinct quadrants ($2 \times 2$ grid) | Three overarching categories with nested numerical ranks |
+| **Philosophical Focus** | Reaction to external deadlines and intrinsic worth | Alignment with long-term goals and daily focus |
+| **Operational Output** | Categorizes tasks by action type (Do, Schedule, Delegate, Delete) | Creates a strictly ordered, linear agenda for the day |
 
 ## Features
 
@@ -25,6 +107,16 @@ The package is self-contained. It depends only on Emacs and Org. The optional pr
 - Tag a headline with a project from a SQLite database via `oltp-add-project-tag`. The tag merges into the existing Org tag list through `org-set-tags`.
 - Scaffold `tasks.org` with `oltp-init-tasks-file`, pre-populated with eleven time-horizon sections.
 - Apply SCHEDULED dates to every TODO in `tasks.org` with `oltp-schedule-tasks-file`, derived from each TODO's parent `*` section.
+- The prioritized TODOs show up in org-agenda and on an appropriately configured dashboard.
+
+## Urgent items
+
+The Hobbs framework used a single asterisk to denote urgent tasks in a group, usually group A.
+Org-mode's headline detection is anchored to the start of a line (the regex is roughly ^\*+ ), so asterisks that appear inside the priority cookie - between [ and ] somewhere in the middle of a line - never trigger headline parsing. 
+Org treats them as plain text.
+You can use multiple asterisks to reflect the degree of urgency.
+However, the urgency does affect the order of execution.
+You can still put the important ahead of the urgent
 
 ## Requirements
 
@@ -38,7 +130,7 @@ The package is self-contained. It depends only on Emacs and Org. The optional pr
 ### Manual install with the Makefile
 
 ```sh
-git clone https://github.com/blaine-mooers/org-todo-letter-number-priorities
+git clone https://github.com/MooersLab/org-todo-letter-number-priorities
 cd org-todo-letter-number-priorities
 make compile
 make info
@@ -172,11 +264,13 @@ Select the region of `**` headlines under one section and run `M-x oltp-prioriti
 ** TODO [B2] unload dishwasher
 ```
 
-The command is idempotent. Strip and re-prioritize when the day changes.
+The command is idempotent. 
+Strip and re-prioritize when the day changes.
 
 ### Sort a section
 
-`M-x oltp-sort-region` re-orders subtrees by `[XY]` priority. Each subtree moves as a unit, so SCHEDULED lines and body text follow the headline.
+`M-x oltp-sort-region` re-orders subtrees by `[XY]` priority. 
+Each subtree moves as a unit, so SCHEDULED lines and body text follow the headline.
 
 If you select the whole file, level-1 `*` headlines stay in place as section boundaries and items inside each section sort independently.
 
@@ -206,7 +300,9 @@ The command is safe to re-run; existing SCHEDULED lines are replaced rather than
 
 ### Tag a TODO with its project
 
-Place point on a `** TODO [XY]` headline and run `M-x oltp-add-project-tag`. The package reads the `ProjectDirectory` column from the SQLite database referenced by `oltp-db-path`, presents the values via `completing-read`, and inserts the chosen project as an Org tag through `org-set-tags`. Existing tags and the alignment column are preserved.
+Place point on a `** TODO [XY]` headline and run `M-x oltp-add-project-tag`. 
+The package reads the `ProjectDirectory` column from the SQLite database referenced by `oltp-db-path`, presents the values via `completing-read`, and inserts the chosen project as an Org tag through `org-set-tags`. 
+Existing tags and the alignment column are preserved.
 
 | Before | After (adding `garden`) |
 | --- | --- |
@@ -228,6 +324,8 @@ The `TODO` keyword stays.
 ## SQLite database
 
 The package expects a SQLite database with a column of project identifiers. 
+You can include other columns.
+
 The default schema is:
 
 ```sql
@@ -257,13 +355,26 @@ Inside Emacs the manual is reachable through `C-h i` once installed.
 
 ## Testing
 
-The ERT suite covers prioritization (single, multi-group, idempotent, replaces existing cookies, three-star), stripping (basic, no-TODO, no-op, preserves body, three-star, empty), headline parsing, priority comparison, sorting (subtree-aware moves, multi-digit Y, preamble, uncookied last, across multiple `*` sections), date helpers (including February in a leap year and December wrap-around), `oltp-init-tasks-file` (create + error + overwrite), the inlined SQLite project-name lookup (table auto-detection, explicit table override, sorted and de-duplicated names, missing database signals), `oltp-add-project-tag` (errors outside headline, append, merge, idempotent), `oltp-tag-region`, and `oltp-schedule-tasks-file` (known section, unknown section skipped).
+The ERT test suite covers the following:
+
+- prioritization (single, multi-group, idempotent, replaces existing cookies, three-star)
+- stripping (basic, no-TODO, no-op, preserves body, three-star, empty)
+- headline parsing, priority comparison
+- sorting (subtree-aware moves, multi-digit Y, preamble, uncookied last, across multiple `*` sections)
+- date helpers (including February in a leap year and December wrap-around)
+- `oltp-init-tasks-file` (create + error + overwrite)
+- the inlined SQLite project-name lookup (table auto-detection, explicit table override, sorted and de-duplicated names, missing database signals)
+- `oltp-add-project-tag` (errors outside headline, append, merge, idempotent)
+- `oltp-tag-region`
+- `oltp-schedule-tasks-file` (known section, unknown section skipped).
 
 ```sh
 make test
 ```
 
 `oltp--read-project` is mocked in tag tests, while the SQLite tests build a temporary database with the `sqlite3` shell (or the built-in library) to exercise the project-names path end to end. Date helpers pin `current-time` to a fixed reference point to make the suite deterministic.
+
+All tests were passing.
 
 ## License
 
