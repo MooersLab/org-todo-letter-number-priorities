@@ -7,15 +7,39 @@
 
 Letter+number TODO priorities for Org-mode.
 
-This package lets you mark, sort, and tag Org headlines with priority cookies of the form `TODO [XY]`, where `X` is an uppercase letter for the priority group and `Y` is a non-negative integer for the rank inside the group. A smaller `Y` means higher priority, so `[A1]` outranks `[A2]` which outranks `[A44]` which outranks `[B1]`. A prioritized Org headline looks like
+## Problem addressed
+
+Org-mode supports using the letters A, B, or C, or integers, to add priorities to to-do items.
+I find these default options to be too simple to meet my needs.
+I have had a decades-long habit of using letters to denote one of the quadrants of the [Eisenhower matrix for time management](https://asana.com/resources/eisenhower-matrix), followed by an integer to rank items within a lettered group.
+I picked up this habit from Charles Hobbs's book *Time Power*, which describes a principled approach to time management that has withstood the test of time.
+
+I wanted the ability to sort a list of TODO items into three groups corresponding to A, B, and C.
+These groups would be separated by blank lines.
+I would use Emacs's ability to shuffle lines up and down easily to determine the priority of items within a group.
+This package will add the letters and numbers along with `** TODO` keyword to such clustered lists under a heading called `* Do it today` in tasks.org.
+This file contains additional top-level headlines for to-do items to be done out in the future.
+It can also strip out these modifiers of the TODO list items to ease carrying over the undone items to the next day and enabling their reprioritizing with incoming TODO items.
+
+This package lets you mark, sort, and tag Org headlines with priority cookies of the form `TODO [XY]`, where `X` is an uppercase letter for the priority group and `Y` is a non-negative integer for the rank inside the group. 
+A smaller `Y` means higher priority, so `[A1]` outranks `[A2]` which outranks `[A44]` which outranks `[B1]`. 
+A prioritized Org headline looks like
 
 ```org
 ** TODO [A1] task description :tag:
 ```
 
 A single space is required between the keyword `TODO` and the left square bracket.
+The TODO keyword must be in a headline with two asterisks in the tasks.org file.
+You have the option to add `:SCHEDULED:` below the line containing ** TODO.
 
-The package is self-contained. It depends only on Emacs and Org. The optional project-tagging feature reads project names from a SQLite database you maintain for time tracking, using either Emacs's built-in `sqlite` library or the `sqlite3` command-line shell.
+The package is self-contained. 
+It depends only on Emacs and Org. 
+
+The optional project-tagging feature reads project names from a SQLite database that you maintain for project management and provides access to these via a pop-up menu.
+I use a four-digit code followed by a brief phrase in camelCase to remind me of the project's nature in a column called ProjectDirectory, because I use this numeric-alphabetic descriptor for the project's directory name in my home directory.
+The dartabase is read by Emacs's built-in `sqlite` library or the `sqlite3` command-line shell.
+
 
 ## Features
 
@@ -38,7 +62,7 @@ The package is self-contained. It depends only on Emacs and Org. The optional pr
 ### Manual install with the Makefile
 
 ```sh
-git clone https://github.com/blaine-mooers/org-todo-letter-number-priorities
+git clone https://github.com/MooersLab/org-todo-letter-number-priorities
 cd org-todo-letter-number-priorities
 make compile
 make info
@@ -172,11 +196,13 @@ Select the region of `**` headlines under one section and run `M-x oltp-prioriti
 ** TODO [B2] unload dishwasher
 ```
 
-The command is idempotent. Strip and re-prioritize when the day changes.
+The command is idempotent. 
+Strip and re-prioritize when the day changes.
 
 ### Sort a section
 
-`M-x oltp-sort-region` re-orders subtrees by `[XY]` priority. Each subtree moves as a unit, so SCHEDULED lines and body text follow the headline.
+`M-x oltp-sort-region` re-orders subtrees by `[XY]` priority. 
+Each subtree moves as a unit, so SCHEDULED lines and body text follow the headline.
 
 If you select the whole file, level-1 `*` headlines stay in place as section boundaries and items inside each section sort independently.
 
@@ -206,7 +232,9 @@ The command is safe to re-run; existing SCHEDULED lines are replaced rather than
 
 ### Tag a TODO with its project
 
-Place point on a `** TODO [XY]` headline and run `M-x oltp-add-project-tag`. The package reads the `ProjectDirectory` column from the SQLite database referenced by `oltp-db-path`, presents the values via `completing-read`, and inserts the chosen project as an Org tag through `org-set-tags`. Existing tags and the alignment column are preserved.
+Place point on a `** TODO [XY]` headline and run `M-x oltp-add-project-tag`. 
+The package reads the `ProjectDirectory` column from the SQLite database referenced by `oltp-db-path`, presents the values via `completing-read`, and inserts the chosen project as an Org tag through `org-set-tags`. 
+Existing tags and the alignment column are preserved.
 
 | Before | After (adding `garden`) |
 | --- | --- |
@@ -228,6 +256,8 @@ The `TODO` keyword stays.
 ## SQLite database
 
 The package expects a SQLite database with a column of project identifiers. 
+You can include other columns.
+
 The default schema is:
 
 ```sql
@@ -257,13 +287,26 @@ Inside Emacs the manual is reachable through `C-h i` once installed.
 
 ## Testing
 
-The ERT suite covers prioritization (single, multi-group, idempotent, replaces existing cookies, three-star), stripping (basic, no-TODO, no-op, preserves body, three-star, empty), headline parsing, priority comparison, sorting (subtree-aware moves, multi-digit Y, preamble, uncookied last, across multiple `*` sections), date helpers (including February in a leap year and December wrap-around), `oltp-init-tasks-file` (create + error + overwrite), the inlined SQLite project-name lookup (table auto-detection, explicit table override, sorted and de-duplicated names, missing database signals), `oltp-add-project-tag` (errors outside headline, append, merge, idempotent), `oltp-tag-region`, and `oltp-schedule-tasks-file` (known section, unknown section skipped).
+The ERT test suite covers the following:
+
+- prioritization (single, multi-group, idempotent, replaces existing cookies, three-star)
+- stripping (basic, no-TODO, no-op, preserves body, three-star, empty)
+- headline parsing, priority comparison
+- sorting (subtree-aware moves, multi-digit Y, preamble, uncookied last, across multiple `*` sections)
+- date helpers (including February in a leap year and December wrap-around)
+- `oltp-init-tasks-file` (create + error + overwrite)
+- the inlined SQLite project-name lookup (table auto-detection, explicit table override, sorted and de-duplicated names, missing database signals)
+- `oltp-add-project-tag` (errors outside headline, append, merge, idempotent)
+- `oltp-tag-region`
+- `oltp-schedule-tasks-file` (known section, unknown section skipped).
 
 ```sh
 make test
 ```
 
 `oltp--read-project` is mocked in tag tests, while the SQLite tests build a temporary database with the `sqlite3` shell (or the built-in library) to exercise the project-names path end to end. Date helpers pin `current-time` to a fixed reference point to make the suite deterministic.
+
+All tests were passing.
 
 ## License
 
