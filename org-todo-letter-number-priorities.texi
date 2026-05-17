@@ -4,7 +4,7 @@
 @settitle org-todo-letter-number-priorities @value{VERSION}
 @documentencoding UTF-8
 @documentlanguage en
-@set VERSION 0.2.0
+@set VERSION 0.3.0
 @set UPDATED 2026-05-16
 @c %**end of header
 
@@ -57,6 +57,7 @@ later version.
 * Introduction::                What this package does and why.
 * Installation::                Manual install, straight.el, use-package.
 * Concepts::                    Priority cookies and headline format.
+* Urgency Asterisks::           Trailing asterisks inside the cookie.
 * Commands::                    Interactive commands.
 * Customization::               User options.
 * The tasks.org File::          Structure and section dates.
@@ -187,7 +188,65 @@ A single uppercase letter from @code{A} through @code{Z}.
 A non-negative integer.  Smaller means higher priority.  @code{Y} may
 have one or more digits.  Sorting is numerical, so @code{C2} outranks
 @code{C10} which outranks @code{C100}.
+
+@item Trailing asterisks
+Optional.  Zero or more @code{*} characters that appear inside the
+brackets, immediately after the integer rank.  Asterisks mark extra
+urgency; see @ref{Urgency Asterisks}.
 @end table
+
+@node Urgency Asterisks
+@chapter Urgency Asterisks
+
+@cindex asterisks
+@cindex urgency
+
+The priority cookie may carry one or more trailing @code{*}
+characters inside the brackets, immediately after the integer rank,
+to mark extra urgency.  This follows the traditional paper-list
+convention of flagging an item with one or more stars.
+
+@example
+** TODO [A1]    standard
+** TODO [A1*]   urgent
+** TODO [A1**]  very urgent
+** TODO [A1***] most urgent
+@end example
+
+Asterisks inside the brackets are safe because Org's headline
+detection matches @code{^\*+ } anchored to the start of a line.  The
+@code{*} characters that appear between @code{[} and @code{]} mid-line
+are plain text from Org's point of view.
+
+@code{oltp-sort-region} weighs asterisks within each priority group as
+follows.
+
+@enumerate
+@item
+A letter difference always dominates the asterisk count.  Plain
+@code{[A1]} still outranks @code{[B1***]}.
+
+@item
+Within the same letter, more asterisks outranks fewer asterisks.
+@code{[A1***]} outranks @code{[A1**]} which outranks @code{[A1*]}.
+
+@item
+Any asterisk-bearing cookie outranks a same-letter cookie without
+asterisks.  @code{[A99*]} outranks @code{[A1]}.
+
+@item
+Within the same letter and asterisk count, ties break on the
+integer rank, smaller first.  @code{[A1*]} outranks @code{[A2*]}.
+@end enumerate
+
+@noindent
+@code{oltp-prioritize-region} preserves any asterisks that are
+already inside a cookie, so they survive renumbering.  The command
+never invents asterisks; they remain a manual urgency marker that
+you type into the cookie yourself.
+
+@code{oltp-strip-region} removes the entire bracketed cookie, so
+asterisks come out with it; the @code{TODO} keyword stays.
 
 @node Commands
 @chapter Commands
@@ -200,14 +259,17 @@ Add @code{TODO [XY]} cookies to every @code{**+} headline between
 the first contiguous block of headlines becomes @code{A1}, @code{A2},
 @code{A3}, the next block becomes @code{B1}, @code{B2}, and so on.
 Headlines that already carry @code{TODO} or a @code{[XY]} cookie are
-normalized first, so the command is idempotent.  Non-headline content
-lines between headlines (for example @code{SCHEDULED} lines, drawers,
-body text) do not break a group and do not consume a priority slot.
+normalized in place, so the command is idempotent.  Non-headline
+content lines between headlines (for example @code{SCHEDULED} lines,
+drawers, body text) do not break a group and do not consume a
+priority slot.  Trailing urgency asterisks inside an existing cookie
+are preserved across the renumbering; see @ref{Urgency Asterisks}.
 @end deffn
 
 @deffn Command oltp-strip-region beg end
 Remove @code{[XY]} cookies from every Org headline in the region.
-The @code{TODO} keyword is preserved.
+The @code{TODO} keyword is preserved.  Trailing asterisks inside the
+cookie are part of the cookie and come out with it.
 @end deffn
 
 @deffn Command oltp-sort-region beg end
@@ -217,8 +279,10 @@ subtree, from its @code{**+} line up to (but not including) the next
 lines and body text follow their headline.  Level-1 @code{*}
 headlines act as section boundaries and stay in place, so sorting
 across the whole @file{tasks.org} file re-orders items inside each
-@code{* Do it @dots{}} section independently.  Subtrees without a
-cookie sort to the end of their section in original relative order.
+@code{* Do it @dots{}} section independently.  Within a letter, more
+asterisks outranks fewer and any asterisk-bearing cookie outranks a
+plain one; see @ref{Urgency Asterisks}.  Subtrees without a cookie
+sort to the end of their section in original relative order.
 @end deffn
 
 @deffn Command oltp-add-project-tag
