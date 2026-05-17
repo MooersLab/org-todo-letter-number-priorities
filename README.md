@@ -39,6 +39,10 @@ These list-editing superpowers reduce the friction in deploying the method.
 
 Dr. Charles Hobbs's book *Time Power* describes a principled approach to time management that has withstood the test of time.
 It predated *Getting Things Done* by David Allen, which is not principle-driven. 
+His method requires identifying your unifying principles.
+This is hard work that most people do not want to do.
+
+
 
 ```bibtex
 @Book{Hobbs1988TimePower,
